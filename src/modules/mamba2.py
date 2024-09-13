@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 
 from einops import rearrange
 
@@ -14,6 +15,7 @@ class Mamba2(nn.Module):
     def __init__(
         self,
         config,
+        id,
         A_init_range=(1, 16),
         dt_min=0.001,
         dt_max=0.1,
@@ -26,16 +28,17 @@ class Mamba2(nn.Module):
         dtype=None,
     ):
         super().__init__()
+        self.id = id
         self.config = config
         self.d_model = config.d_model
         self.d_state = config.d_state
         self.d_conv = config.d_conv
         self.expand = config.expand
         self.d_inner = self.expand * self.d_model
-        self.headdim = config.headdim
+        self.nheads = config.nheads
         self.ngroups = config.ngroups
-        assert self.d_inner % self.headdim == 0
-        self.nheads = self.d_inner // self.headdim
+        assert self.d_inner % self.nheads == 0
+        self.headdim = self.d_inner // self.nheads
         self.dt_limit = dt_limit
         self.activation = config.activation
         self.chunk_size = chunk_size
@@ -94,7 +97,7 @@ class Mamba2(nn.Module):
 
         self.out_proj = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
 
-    def forward(self, u):
+    def forward(self, u, save_weights=False):
         """
         u: (B, L, D)
         Returns: same shape as u
@@ -145,5 +148,20 @@ class Mamba2(nn.Module):
         else:
             y = y * z
         out = self.out_proj(y)
+
+        if self.config.wandb:
+            if save_weights:
+                print("in_proj-final:")
+                print(self.in_proj.weight)
+                wandb.log({"in_proj-final": wandb.Image(self.in_proj.weight.numpy(force=True))})
+
+                print("out_proj-final:")
+                print(self.out_proj.weight)
+                wandb.log({"out_proj-final": wandb.Image(self.out_proj.weight.numpy(force=True))})
+            if self.training and self.nheads == 1:
+                wandb.log({
+                    "params/A": torch.exp(self.A_log).item(),
+                    "params/dt_bias": self.dt_bias.item(),
+                })
 
         return out

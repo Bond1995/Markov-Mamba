@@ -11,9 +11,9 @@ CODE_BUNDLE=`epfml bundle pack .`
 i=1;
 for chain in switch;
 do
-    for p in 0.2 0.5;
+    for p in 0.5;
     do
-        for q in 0.3 0.8;
+        for q in 0.8;
         do
             for order in 1;
             do
@@ -21,7 +21,7 @@ do
                 do
                     for sequence_length in 1024;
                     do
-                        for iterations in 500;
+                        for iterations in 300;
                         do
                             for j in 1;
                             do

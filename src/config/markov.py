@@ -23,11 +23,11 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--vocab_size', default=2, type=int)
     # Model params
     parser.add_argument('--model', default='base', choices=['base'])
-    parser.add_argument('--d_model', default=16, type=int)
+    parser.add_argument('--d_model', default=8, type=int)
     parser.add_argument('--d_state', default=4, type=int)
     parser.add_argument('--d_conv', default=4, type=int)
     parser.add_argument('--expand', default=2, type=int)
-    parser.add_argument('--headdim', default=32, type=int)
+    parser.add_argument('--nheads', default=1, type=int)
     parser.add_argument('--ngroups', default=1, type=int)
     parser.add_argument('--n_layer', default=1, type=int)
     parser.add_argument('--sequence_length', default=1024, type=int)

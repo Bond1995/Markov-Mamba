@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import wandb
 
 from modules.mamba2 import Mamba2
 from modules.mlp import GatedMLP, MLP
@@ -11,9 +12,10 @@ from modules.mlp import GatedMLP, MLP
 
 class Block(nn.Module):
     def __init__(
-        self, config
+        self, config, id
     ):
         super().__init__()
+        self.id = id
         self.config = config
         self.d_model = config.d_model
         self.device = config.device
@@ -21,27 +23,27 @@ class Block(nn.Module):
         activation = F.relu if config.activation == "relu" else F.silu
         factory_kwargs = {"device": self.device, "dtype": self.dtype}
 
-        self.mixer = Mamba2(config, **factory_kwargs)
+        self.mixer = Mamba2(config, id, **factory_kwargs)
         if self.config.layernorm:
             self.norm = nn.LayerNorm(self.d_model, bias=False, **factory_kwargs)
             self.norm2 = nn.LayerNorm(self.d_model, bias=False, **factory_kwargs)
         if self.config.gate_act:
-            self.mlp = GatedMLP(self.d_model, activation=activation, **factory_kwargs)
+            self.mlp = GatedMLP(config, self.d_model, **factory_kwargs)
         else:
-            self.mlp = MLP(self.d_model, activation=activation, **factory_kwargs)
+            self.mlp = MLP(config, self.d_model, **factory_kwargs)
 
-    def forward(self, hidden_states):
+    def forward(self, hidden_states, save_weights=False):
         residual = hidden_states
         if self.config.layernorm:
             hidden_states = self.norm(hidden_states).to(self.dtype)
-        hidden_states = self.mixer(hidden_states)
+        hidden_states = self.mixer(hidden_states, save_weights=save_weights)
 
         residual = hidden_states + residual
         if self.config.layernorm:
             hidden_states = self.norm2(residual).to(self.dtype)
-            hidden_states = self.mlp(hidden_states)
+            hidden_states = self.mlp(hidden_states, save_weights=save_weights)
         else:
-            hidden_states = self.mlp(residual)
+            hidden_states = self.mlp(residual, save_weights=save_weights)
 
         return hidden_states + residual
 
@@ -63,7 +65,7 @@ class MambaLMHeadModel(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, d_model, **factory_kwargs)
-        self.layers = nn.ModuleList([Block(config) for i in range(n_layer)])
+        self.layers = nn.ModuleList([Block(config, i) for i in range(n_layer)])
         if self.config.layernorm:
             self.norm_f = nn.LayerNorm(d_model, bias=False, **factory_kwargs)
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False, **factory_kwargs)
@@ -133,13 +135,20 @@ class MambaLMHeadModel(nn.Module):
             {"params": sorted(list(no_decay)), "weight_decay": 0.0},
         ]
     
-    def forward(self, idx, targets):
+    def forward(self, idx, targets, save_weights=False):
         hidden_states = self.embedding(idx)
         for layer in self.layers:
-            hidden_states = layer(hidden_states)
+            hidden_states = layer(hidden_states, save_weights=save_weights)
         if self.config.layernorm:
             hidden_states = self.norm_f(hidden_states).to(self.dtype)
         logits = self.lm_head(hidden_states)
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+
+        if save_weights and self.config.wandb:
+            print("emb-final:")
+            print(self.embedding.weight)
+            wandb.log({"emb-final": wandb.Image(self.embedding.weight.numpy(force=True))})
+            print("dot product:")
+            print(self.embedding.weight[0] @ self.embedding.weight[1])
 
         return {'logits': logits, 'loss': loss}

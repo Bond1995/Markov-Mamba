@@ -71,20 +71,23 @@ def eval(model, P, order, sequence_length, batch_size, generator, extra_args, ma
 
 
 @torch.no_grad()
-def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=nullcontext()):
+def eval_final(model, P, order, sequence_length, generator, extra_args, ctx=nullcontext()):
     assert model.training == False
 
     loss_list_val, acc_list = [], []
 
     x, y = get_batch(P, order, sequence_length, 1, generator, extra_args)
     with ctx:
-        outputs = model (x, targets=y)
+        outputs = model(x, targets=y, save_weights=True)
     val_loss = outputs['loss']
     loss_list_val.append(val_loss)
     acc_list.append((outputs['logits'].argmax(-1) == y).float().mean())
 
-    probs = F.softmax(outputs['logits'], dim=-1)
+    val_acc = torch.stack(acc_list).mean().item()
+    val_loss = torch.stack(loss_list_val).mean().item()
+    val_perplexity = 2.71828 ** val_loss
 
+    probs = F.softmax(outputs['logits'], dim=-1)
     xb = x[0].float()
     probsb = probs[0, order-1:]
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(extra_args.device)
@@ -93,10 +96,6 @@ def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=null
     for i in range(2**order):
         vec = probsb[idx == i][:,1] # estimated p
         prob_vec.append(vec)
-
-    val_acc = torch.stack(acc_list).mean().item()
-    val_loss = torch.stack(loss_list_val).mean().item()
-    val_perplexity = 2.71828 ** val_loss
 
     opt_loss = optimal_est(P, order, sequence_length, generator, extra_args)
 

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import wandb
 import time
 
-from .utils import eval, eval_probs, get_batch, save_checkpoint
+from .utils import eval, eval_final, get_batch, save_checkpoint
 
 
 def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_size, sequence_length, generator, eval_freq, ckpt_path, extra_args):
@@ -21,7 +21,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
     print(P)
     
     model.train()
-
+    
     t0 = time.time()
     while itr < iterations:
         for microstep_idx in range(acc_steps):  # gradient accumulation
@@ -67,7 +67,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
                 })
             
             if itr == iterations:
-                _, _, _, prob_vec, opt_loss = eval_probs(model, P, order, sequence_length, generator, extra_args,
+                _, _, _, prob_vec, opt_loss = eval_final(model, P, order, sequence_length, generator, extra_args,
                                                         ctx=type_ctx)
                 if extra_args.wandb:
                     for k in range(2**order):

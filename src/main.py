@@ -5,6 +5,7 @@ import inspect
 import copy
 import argparse
 import wandb
+import matplotlib as plt
 
 import config
 from models.utils import get_model
