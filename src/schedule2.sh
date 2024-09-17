@@ -19,9 +19,9 @@ do
             do
                 for batch_size in 16;
                 do
-                    for sequence_length in 1024;
+                    for sequence_length in 512;
                     do
-                        for iterations in 5000;
+                        for iterations in 1000;
                         do
                             for j in 1;
                             do
