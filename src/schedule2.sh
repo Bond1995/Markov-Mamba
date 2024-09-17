@@ -3,7 +3,7 @@ set -e  # exit on error
 
 USER=bondasch
 LAB=linx
-WANDB_PROJECT="markov-mamba-order-full"
+WANDB_PROJECT="markov-mamba-order-full-new"
 WANDB_RUN_GROUP="test01"
 WANDB_API_KEY=`python -c "import wandb; print(wandb.api.api_key)"`
 CODE_BUNDLE=`epfml bundle pack .`

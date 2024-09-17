@@ -39,11 +39,11 @@ class GatedMLP(nn.Module):
         y = self.fc2(y)
 
         if save_weights and self.config.wandb:
-            print("fc1-l"+self.id)
+            print("fc1-l"+str(self.id))
             print(self.fc1.weight)
             wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
 
-            print("fc2-l"+self.id)
+            print("fc2-l"+str(self.id))
             print(self.fc2.weight)
             wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
         
