@@ -39,9 +39,15 @@ def main(args):
 
     # Markov transition probabilities (binary alphabet)
     if args.chain == 'switch':
-        p = args.p # 0... -> 1
-        q = args.q # 1... -> 0
-        P = torch.Tensor([[1-p, p],[q, 1-q]]).to(args.dtype).to(args.device)
+        if order == 1:
+            p = args.p # 0... -> 1
+            q = args.q # 1... -> 0
+            P = torch.Tensor([[1-p, p],[q, 1-q]]).to(args.dtype).to(args.device)
+        else:
+            P = torch.zeros(2**order, 2, dtype=args.dtype, device=args.device)
+            for k in range(2**order):
+                pk = torch.rand(1, generator=generator, dtype=args.dtype, device=args.device)
+                P[k,:] = torch.Tensor([1-pk, pk])
     else:
         P = torch.zeros(2**order, 2, dtype=args.dtype, device=args.device)
         for k in range(2**order):

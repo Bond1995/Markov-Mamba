@@ -20,17 +20,16 @@ class Block(nn.Module):
         self.d_model = config.d_model
         self.device = config.device
         self.dtype = config.dtype
-        activation = F.relu if config.activation == "relu" else F.silu
         factory_kwargs = {"device": self.device, "dtype": self.dtype}
 
         self.mixer = Mamba2(config, id, **factory_kwargs)
         if self.config.layernorm:
             self.norm = nn.LayerNorm(self.d_model, bias=False, **factory_kwargs)
             self.norm2 = nn.LayerNorm(self.d_model, bias=False, **factory_kwargs)
-        if self.config.gate_act:
-            self.mlp = GatedMLP(config, self.d_model, **factory_kwargs)
+        if self.config.gate:
+            self.mlp = GatedMLP(config, id, self.d_model, **factory_kwargs)
         else:
-            self.mlp = MLP(config, self.d_model, **factory_kwargs)
+            self.mlp = MLP(config, id, self.d_model, **factory_kwargs)
 
     def forward(self, hidden_states, save_weights=False):
         residual = hidden_states

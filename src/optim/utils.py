@@ -5,7 +5,7 @@ from contextlib import nullcontext
 
 
 def optimal_est(P, order, sequence_length, generator, extra_args):
-    x, y = get_batch(P, order, sequence_length, 1024, generator, extra_args)
+    x, y = get_batch(P, order, sequence_length, 4096, generator, extra_args)
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(P.device)
     opt_logits = torch.zeros(x.size(0), x.size(1), P.size(1), device=P.device)
     if order > 1:

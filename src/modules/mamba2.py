@@ -138,30 +138,30 @@ class Mamba2(nn.Module):
         y = rearrange(y, "b l h p -> b l (h p)")
 
         # Multiply "gate" branch and apply extra normalization layer
-        if self.config.gate_act:
+        if self.config.layernorm:
+            y = self.norm(y)
+        if self.config.gate:
             if self.activation == "relu":
                 z = F.relu(z)
             else:
                 z = F.silu(z)
-        if self.config.layernorm:
-            y = self.norm(y) * z
-        else:
             y = y * z
+        
         out = self.out_proj(y)
 
         if self.config.wandb:
             if save_weights:
-                print("in_proj-final:")
+                print("in_proj-l"+str(self.id))
                 print(self.in_proj.weight)
-                wandb.log({"in_proj-final": wandb.Image(self.in_proj.weight.numpy(force=True))})
+                wandb.log({"in_proj-l"+str(self.id): wandb.Image(self.in_proj.weight.numpy(force=True))})
 
-                print("out_proj-final:")
+                print("out_proj-l"+str(self.id))
                 print(self.out_proj.weight)
-                wandb.log({"out_proj-final": wandb.Image(self.out_proj.weight.numpy(force=True))})
+                wandb.log({"out_proj-l"+str(self.id): wandb.Image(self.out_proj.weight.numpy(force=True))})
             if self.training and self.nheads == 1:
                 wandb.log({
-                    "params/A": torch.exp(self.A_log).item(),
-                    "params/dt_bias": self.dt_bias.item(),
+                    "params/A-l"+str(self.id): torch.exp(self.A_log).item(),
+                    "params/dt_bias-l"+str(self.id): self.dt_bias.item(),
                 })
 
         return out

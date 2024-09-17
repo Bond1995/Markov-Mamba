@@ -38,7 +38,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--layernorm', action='store_true') # If True, adds layer norms
     parser.add_argument('--conv', action='store_true') # If True, adds convolution
     parser.add_argument('--conv_act', action='store_true') # If True, adds convolution activation in Mamba block
-    parser.add_argument('--gate_act', action='store_true') # If True, adds gating activation in Mamba block and replaces MLP with GatedMLP
+    parser.add_argument('--gate', action='store_true') # If True, adds gating in Mamba block and replaces MLP with GatedMLP
     # logging params (wandb)
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--wandb_project', default="bias-test", type=str)

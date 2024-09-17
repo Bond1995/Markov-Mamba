@@ -3,7 +3,7 @@ set -e  # exit on error
 
 USER=bondasch
 LAB=linx
-WANDB_PROJECT="markov-mamba-test-order"
+WANDB_PROJECT="markov-mamba-order-full"
 WANDB_RUN_GROUP="test01"
 WANDB_API_KEY=`python -c "import wandb; print(wandb.api.api_key)"`
 CODE_BUNDLE=`epfml bundle pack .`
@@ -11,9 +11,9 @@ CODE_BUNDLE=`epfml bundle pack .`
 i=1;
 for chain in random;
 do
-    for p in 0.2;
+    for n_layer in 1 2;
     do
-        for q in 0.3;
+        for d_model in 16;
         do
             for order in 1 2 3 4;
             do
@@ -27,8 +27,8 @@ do
                             do
                                 # Generate a unique ID for wandb. This makes sure that automatic restarts continue with the same job.
                                 RUN_ID=`python -c "import wandb; print(wandb.util.generate_id())"`;
-                                RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --p $p --q $q --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations"
-
+                                #RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --n_layer $n_layer --d_model $d_model --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations"
+                                RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --n_layer $n_layer --d_model $d_model --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations --layernorm --conv --conv_act --gate --activation silu"
                                 runai-rcp submit \
                                     --name ${WANDB_RUN_GROUP}-${RUN_ID} \
                                     --environment WANDB_PROJECT=$WANDB_PROJECT \

@@ -9,22 +9,25 @@ class GatedMLP(nn.Module):
     def __init__(
         self,
         config,
+        id,
         in_features,
         hidden_features=None,
         out_features=None,
         bias=False,
-        multiple_of=128,
+        factor=4,
         device=None,
         dtype=None,
     ):
         super().__init__()
         self.config = config
+        self.id = id
         factory_kwargs = {"device": device, "dtype": dtype}
         out_features = out_features if out_features is not None else in_features
-        hidden_features = (
-            hidden_features if hidden_features is not None else int(8 * in_features / 3)
-        )
-        hidden_features = (hidden_features + multiple_of - 1) // multiple_of * multiple_of
+        #hidden_features = (
+        #    hidden_features if hidden_features is not None else int(8 * in_features / 3)
+        #)
+        #hidden_features = (hidden_features + multiple_of - 1) // multiple_of * multiple_of
+        hidden_features = hidden_features if hidden_features is not None else factor * in_features
         self.fc1 = nn.Linear(in_features, 2 * hidden_features, bias=bias, **factory_kwargs)
         self.activation = F.relu if config.activation=="relu" else F.silu
         self.fc2 = nn.Linear(hidden_features, out_features, bias=bias, **factory_kwargs)
@@ -36,13 +39,13 @@ class GatedMLP(nn.Module):
         y = self.fc2(y)
 
         if save_weights and self.config.wandb:
-            print("fc1-final:")
+            print("fc1-l"+self.id)
             print(self.fc1.weight)
-            wandb.log({"fc1-final": wandb.Image(self.fc1.weight.numpy(force=True))})
+            wandb.log({"fc1-l"+self.id: wandb.Image(self.fc1.weight.numpy(force=True))})
 
-            print("fc2-final:")
+            print("fc2-l"+self.id)
             print(self.fc2.weight)
-            wandb.log({"fc2-final": wandb.Image(self.fc2.weight.numpy(force=True))})
+            wandb.log({"fc2-l"+self.id: wandb.Image(self.fc2.weight.numpy(force=True))})
         
         return y
     
@@ -50,22 +53,25 @@ class MLP(nn.Module):
     def __init__(
         self,
         config,
+        id,
         in_features,
         hidden_features=None,
         out_features=None,
         bias=False,
-        multiple_of=128,
+        factor=4,
         device=None,
         dtype=None,
     ):
         super().__init__()
         self.config = config
+        self.id = id
         factory_kwargs = {"device": device, "dtype": dtype}
         out_features = out_features if out_features is not None else in_features
-        hidden_features = (
-            hidden_features if hidden_features is not None else int(8 * in_features / 3)
-        )
-        hidden_features = (hidden_features + multiple_of - 1) // multiple_of * multiple_of
+        #hidden_features = (
+        #    hidden_features if hidden_features is not None else int(8 * in_features / 3)
+        #)
+        #hidden_features = (hidden_features + multiple_of - 1) // multiple_of * multiple_of
+        hidden_features = hidden_features if hidden_features is not None else factor * in_features
         self.fc1 = nn.Linear(in_features, hidden_features, bias=bias, **factory_kwargs)
         self.activation = F.relu if config.activation=="relu" else F.silu
         self.fc2 = nn.Linear(hidden_features, out_features, bias=bias, **factory_kwargs)
@@ -76,12 +82,12 @@ class MLP(nn.Module):
         y = self.fc2(y)
 
         if save_weights and self.config.wandb:
-            print("fc1-final:")
+            print("fc1-l"+str(self.id))
             print(self.fc1.weight)
-            wandb.log({"fc1-final": wandb.Image(self.fc1.weight.numpy(force=True))})
+            wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
 
-            print("fc2-final:")
+            print("fc2-l"+str(self.id))
             print(self.fc2.weight)
-            wandb.log({"fc2-final": wandb.Image(self.fc2.weight.numpy(force=True))})
+            wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
         
         return y
