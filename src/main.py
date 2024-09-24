@@ -32,13 +32,13 @@ def get_exp_name(args):
     return exp_name
 
 
-def main(args): 
+def main(args):
     order = args.order
     generator = torch.Generator(device=args.device)
     generator.seed()
 
     # Markov transition probabilities (binary alphabet)
-    if args.chain == 'switch':
+    if args.chain == "switch":
         if order == 1:
             p = args.p # 0... -> 1
             q = args.q # 1... -> 0
@@ -48,11 +48,13 @@ def main(args):
             for k in range(2**order):
                 pk = torch.rand(1, generator=generator, dtype=args.dtype, device=args.device)
                 P[k,:] = torch.Tensor([1-pk, pk])
-    else:
+    elif args.chain == "random-fixed":
         P = torch.zeros(2**order, 2, dtype=args.dtype, device=args.device)
         for k in range(2**order):
             pk = torch.rand(1, generator=generator, dtype=args.dtype, device=args.device)
             P[k,:] = torch.Tensor([1-pk, pk])
+    else:
+        P = None
 
     torch.backends.cuda.matmul.allow_tf32 = True # allows us to make sure we're able to use tensorfloat32 during training
     torch.backends.cudnn.allow_tf32 = True

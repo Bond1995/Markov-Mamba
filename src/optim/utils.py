@@ -4,6 +4,15 @@ import torch.nn.functional as F
 from contextlib import nullcontext
 
 
+def get_random_P(order, generator, device, dtype):
+    P = torch.zeros(2**order, 2, dtype=dtype, device=device)
+    for k in range(2**order):
+        pk = torch.rand(1, generator=generator, dtype=dtype, device=device)
+        P[k,:] = torch.Tensor([1-pk, pk])
+
+    return P
+
+
 def optimal_est(P, order, sequence_length, generator, extra_args):
     x, y = get_batch(P, order, sequence_length, 4096, generator, extra_args)
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(P.device)
@@ -21,24 +30,38 @@ def optimal_est(P, order, sequence_length, generator, extra_args):
 
 def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     data = torch.zeros(batch_size, seq_length+1, device=extra_args.device)
-    if extra_args.initial == 'steady':
-        if P.size(0) == 2:
-            alpha = P[1,0] / (P[0,1] + P[1,0])
+    if P == None:
+        # Generate first k bits
+        alpha = 0.5
+        for k in range(order):
+            data[:,k] = torch.bernoulli(alpha*torch.ones((batch_size,), device=extra_args.device), generator=generator)
+        # Generate following bits
+        for b in range(batch_size):
+            # New random P for every sequence
+            P = get_random_P(order, generator, extra_args.device, extra_args.dtype)
+            for i in range(order, seq_length):
+                data[b,i] = get_next_symbols(P, order, data[b,i-order:i])
+    else:
+        # Use same fixed P for all sequences
+        # Generate first k bits
+        if extra_args.initial == 'steady':
+            if P.size(0) == 2:
+                alpha = P[1,0] / (P[0,1] + P[1,0])
+            else:
+                alpha = 0.5
+        elif extra_args.initial == 'uniform':
+            alpha = 0.5
         else:
             alpha = 0.5
-    elif extra_args.initial == 'uniform':
-        alpha = 0.5
-    else:
-        alpha = 0.5
-    # Generate first k bits
-    for k in range(order):
-        data[:,k] = torch.bernoulli(alpha*torch.ones((batch_size,), device=extra_args.device), generator=generator)
-    for i in range(order, seq_length):
-        data[:,i] = get_next_symbols(P, order, data[:,i-order:i])
+        for k in range(order):
+            data[:,k] = torch.bernoulli(alpha*torch.ones((batch_size,), device=extra_args.device), generator=generator)
+        for i in range(order, seq_length):
+            data[:,i] = get_next_symbols(P, order, data[:,i-order:i])
     x = data[:,:seq_length].to(int)
     y = data[:,1:].to(int)
     
     return x, y
+
 
 def get_next_symbols(P, order, data):
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(data.device)
@@ -52,10 +75,11 @@ def get_next_symbols(P, order, data):
 @torch.no_grad()
 def eval(model, P, order, sequence_length, batch_size, generator, extra_args, max_num_batches=24, ctx=nullcontext()):
     assert model.training == False
+    assert P is not None
 
     loss_list_val, acc_list = [], []
 
-    for _ in range(max_num_batches): 
+    for _ in range(max_num_batches):
         x, y = get_batch(P, order, sequence_length, batch_size, generator, extra_args)
         with ctx:
             outputs = model(x, targets=y)
@@ -71,21 +95,13 @@ def eval(model, P, order, sequence_length, batch_size, generator, extra_args, ma
 
 
 @torch.no_grad()
-def eval_final(model, P, order, sequence_length, generator, extra_args, ctx=nullcontext()):
+def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=nullcontext()):
     assert model.training == False
-
-    loss_list_val, acc_list = [], []
-
+    assert P is not None
+    
     x, y = get_batch(P, order, sequence_length, 1, generator, extra_args)
     with ctx:
         outputs = model(x, targets=y, save_weights=True)
-    val_loss = outputs['loss']
-    loss_list_val.append(val_loss)
-    acc_list.append((outputs['logits'].argmax(-1) == y).float().mean())
-
-    val_acc = torch.stack(acc_list).mean().item()
-    val_loss = torch.stack(loss_list_val).mean().item()
-    val_perplexity = 2.71828 ** val_loss
 
     probs = F.softmax(outputs['logits'], dim=-1)
     xb = x[0].float()
@@ -97,9 +113,7 @@ def eval_final(model, P, order, sequence_length, generator, extra_args, ctx=null
         vec = probsb[idx == i][:,1] # estimated p
         prob_vec.append(vec)
 
-    opt_loss = optimal_est(P, order, sequence_length, generator, extra_args)
-
-    return val_acc, val_loss, val_perplexity, prob_vec, opt_loss
+    return prob_vec
 
 
 def save_checkpoint(model, opt, scheduler, itr, ckpt_path, **extra_args):

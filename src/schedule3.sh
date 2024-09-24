@@ -3,7 +3,7 @@ set -e  # exit on error
 
 USER=bondasch
 LAB=linx
-WANDB_PROJECT="markov-mamba-order-simple-d64"
+WANDB_PROJECT="markov-mamba-random-l1o1-v2"
 WANDB_RUN_GROUP="test01"
 WANDB_API_KEY=`python -c "import wandb; print(wandb.api.api_key)"`
 CODE_BUNDLE=`epfml bundle pack .`
@@ -13,21 +13,21 @@ for chain in random;
 do
     for n_layer in 1 2;
     do
-        for d_model in 64;
+        for d_model in 32;
         do
-            for order in 1 2 3 4;
+            for order in 1;
             do
-                for batch_size in 16;
+                for batch_size in 64;
                 do
                     for sequence_length in 512;
                     do
-                        for iterations in 2000;
+                        for iterations in 1000;
                         do
-                            for j in 1;
+                            for j in 1 2 3 4 5;
                             do
                                 # Generate a unique ID for wandb. This makes sure that automatic restarts continue with the same job.
                                 RUN_ID=`python -c "import wandb; print(wandb.util.generate_id())"`;
-                                RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --n_layer $n_layer --d_model $d_model --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations"
+                                RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --n_layer $n_layer --d_model $d_model --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations --layernorm --conv --activation silu"
                                 #RUN_FILE="python main.py --wandb --wandb_project $WANDB_PROJECT --chain $chain --n_layer $n_layer --d_model $d_model --order $order --batch_size $batch_size --sequence_length $sequence_length --iterations $iterations --layernorm --conv --conv_act --gate --activation silu"
                                 runai-rcp submit \
                                     --name ${WANDB_RUN_GROUP}-${RUN_ID} \

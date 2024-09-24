@@ -3,7 +3,7 @@ import torch
 def parse_args(base_parser, args, namespace):
     parser = base_parser
     # General training params
-    parser.add_argument('--batch_size', default=16, type=int)
+    parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--acc_steps', default=1, type=int)
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--device', default='cuda:0', type=str)
@@ -30,7 +30,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--nheads', default=1, type=int)
     parser.add_argument('--ngroups', default=1, type=int)
     parser.add_argument('--n_layer', default=1, type=int)
-    parser.add_argument('--sequence_length', default=1024, type=int)
+    parser.add_argument('--sequence_length', default=256, type=int)
     parser.add_argument('--tie_embeddings', default=True, type=bool)
     parser.add_argument('--dtype', default=torch.float32, type=torch.dtype)
     parser.add_argument('--bias', default=False, type=bool)
@@ -48,7 +48,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--p', default=0.5, type=float)
     parser.add_argument('--q', default=0.5, type=float)
     parser.add_argument('--order', default=1, type=int)
-    parser.add_argument('--chain', default='random', choices=['switch', 'random'])
-    parser.add_argument('--initial', default='steady', choices=['uniform', 'steady'])
+    parser.add_argument('--chain', default='random', choices=['switch', 'random', 'random-fixed'])
+    parser.add_argument('--initial', default='uniform', choices=['uniform', 'steady'])
     
     return parser.parse_args(args, namespace)
