@@ -158,6 +158,11 @@ class Mamba2(nn.Module):
                 print("out_proj-l"+str(self.id))
                 print(self.out_proj.weight)
                 wandb.log({"out_proj-l"+str(self.id): wandb.Image(self.out_proj.weight.numpy(force=True))})
+
+                if self.config.conv:
+                    print("conv-l"+str(self.id))
+                    print(self.conv1d.weight)
+                    wandb.log({"conv-l"+str(self.id): wandb.Image(self.conv1d.weight.numpy(force=True).squeeze())})
             if self.training and self.nheads == 1:
                 wandb.log({
                     "params/A-l"+str(self.id): torch.exp(self.A_log).item(),

@@ -12,6 +12,23 @@ def get_random_P(order, generator, device, dtype):
 
     return P
 
+def empirical_est(x, y, order, beta=0.5):
+    assert x.size(0) == 1
+    device = x.device
+    x = x.float().squeeze()
+    y = y.float().squeeze()
+    powers = torch.Tensor([2**i for i in reversed(range(order))]).to(device)
+    idx = F.conv1d(x.view(1,-1), powers.view(1,1,-1)).squeeze()
+    est_vec = []
+    for i in range(2**order):
+        mask = (idx == i)
+        s = y[order-1:][mask]
+        s = torch.cat((torch.Tensor([0]).to(device), s[:-1]))
+        s = (s.cumsum(0) + beta) / (torch.arange(len(s), device=device) + 2*beta)
+        est_vec.append(s)
+
+    return est_vec
+    
 
 def optimal_est(P, order, sequence_length, generator, extra_args):
     x, y = get_batch(P, order, sequence_length, 4096, generator, extra_args)
@@ -26,7 +43,6 @@ def optimal_est(P, order, sequence_length, generator, extra_args):
     opt_loss = F.nll_loss(opt_logits.view(-1, opt_logits.size(-1)), y.view(-1), ignore_index=-1)
 
     return opt_loss
-
 
 def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     data = torch.zeros(batch_size, seq_length+1, device=extra_args.device)
@@ -61,7 +77,6 @@ def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     y = data[:,1:].to(int)
     
     return x, y
-
 
 def get_next_symbols(P, order, data):
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(data.device)
@@ -100,6 +115,10 @@ def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=null
     assert P is not None
     
     x, y = get_batch(P, order, sequence_length, 1, generator, extra_args)
+
+    # Get empirical add-beta estimator
+    est_vec = empirical_est(x, y, order)
+
     with ctx:
         outputs = model(x, targets=y, save_weights=True)
 
@@ -113,7 +132,7 @@ def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=null
         vec = probsb[idx == i][:,1] # estimated p
         prob_vec.append(vec)
 
-    return prob_vec
+    return prob_vec, est_vec
 
 
 def save_checkpoint(model, opt, scheduler, itr, ckpt_path, **extra_args):

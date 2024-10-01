@@ -24,7 +24,7 @@ def parse_args(base_parser, args, namespace):
     # Model params
     parser.add_argument('--model', default='base', choices=['base'])
     parser.add_argument('--d_model', default=8, type=int)
-    parser.add_argument('--d_state', default=4, type=int)
+    parser.add_argument('--d_state', default=8, type=int)
     parser.add_argument('--d_conv', default=4, type=int)
     parser.add_argument('--expand', default=2, type=int)
     parser.add_argument('--nheads', default=1, type=int)

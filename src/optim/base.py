@@ -59,7 +59,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
             model.eval()
             train_loss = loss.detach().cpu().item()
             current_lr = scheduler.get_last_lr()[0] if scheduler is not None else extra_args.lr
-            val_acc, val_loss, val_perplexity = eval(model, P_test, order, sequence_length, batch_size,
+            val_acc, val_loss, val_perplexity = eval(model, P_test, order, 2*sequence_length, batch_size,
                                                     generator, extra_args, max_num_batches=10, ctx=type_ctx)
 
             print_string = f"{itr} [train] loss={train_loss:.3f} [val] loss={val_loss:.3f}, pp={val_perplexity:.2f}, acc={val_acc:3f}"
@@ -79,13 +79,14 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
                 })
             
             if itr == iterations:
-                prob_vec = eval_probs(model, P_test, order, sequence_length, generator, extra_args,
+                prob_vec, est_vec = eval_probs(model, P_test, order, 2*sequence_length, generator, extra_args,
                                                         ctx=type_ctx)
                 if extra_args.wandb:
                     for k in range(2**order):
                         for i in range(len(prob_vec[k])):
                             wandb.log({
-                                "est/est_" + str(k): prob_vec[k][i].detach().cpu().item(),
+                                "est/model_est_" + str(k): prob_vec[k][i].detach().cpu().item(),
+                                "est/empirical_est_" + str(k): est_vec[k][i].detach().cpu().item(),
                             })
 
             model.train()
