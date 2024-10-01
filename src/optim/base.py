@@ -22,7 +22,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
         print("Markov transition matrix:")
         print(P)
     else:
-        P_test = get_random_P(order, generator, extra_args.device, extra_args.dtype)
+        P_test = get_random_P(order, 1, generator, extra_args.device, extra_args.dtype).squeeze(0)
         print("Test Markov transition matrix:")
         print(P_test)
     

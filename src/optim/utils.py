@@ -10,7 +10,7 @@ def get_random_P(order, batch_size, generator, device, dtype):
 
     return P
 
-def empirical_est(x, y, order, beta=0.5):
+def empirical_est(x, y, order, beta=1):
     assert x.size(0) == 1
     device = x.device
     x = x.float().squeeze()
@@ -26,7 +26,6 @@ def empirical_est(x, y, order, beta=0.5):
         est_vec.append(s)
 
     return est_vec
-    
 
 def optimal_est(P, order, sequence_length, generator, extra_args):
     x, y = get_batch(P, order, sequence_length, 4096, generator, extra_args)
@@ -49,7 +48,7 @@ def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     if P == None:
         # Generate first k bits
         alpha = 0.5
-        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order)), generator=generator)
+        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order), device=extra_args.device), generator=generator)
         # Generate following bits
         P = get_random_P(order, batch_size, generator, extra_args.device, extra_args.dtype)
         batch_indices = torch.arange(batch_size)
@@ -75,7 +74,7 @@ def get_batch(P, order, seq_length, batch_size, generator, extra_args):
             alpha = 0.5
         else:
             alpha = 0.5
-        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order)), generator=generator)
+        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order), device=extra_args.device), generator=generator)
         # Generate following bits
         for i in range(order, seq_length+1):
             prev_symbols = data[:, i-order:i]
