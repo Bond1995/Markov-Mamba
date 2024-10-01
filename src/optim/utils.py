@@ -87,14 +87,6 @@ def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     
     return x, y
 
-def get_next_symbols(P, order, data):
-    powers = torch.Tensor([2**i for i in reversed(range(order))]).to(data.device)
-    idx = data @ powers
-    M = P[idx.to(int)]
-    s = torch.multinomial(M,1).flatten()
-
-    return s
-
 
 @torch.no_grad()
 def eval(model, P, order, sequence_length, batch_size, generator, extra_args, max_num_batches=24, ctx=nullcontext()):
