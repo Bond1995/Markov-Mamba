@@ -4,11 +4,9 @@ import torch.nn.functional as F
 from contextlib import nullcontext
 
 
-def get_random_P(order, generator, device, dtype):
-    P = torch.zeros(2**order, 2, dtype=dtype, device=device)
-    for k in range(2**order):
-        pk = torch.rand(1, generator=generator, dtype=dtype, device=device)
-        P[k,:] = torch.Tensor([1-pk, pk])
+def get_random_P(order, batch_size, generator, device, dtype):
+    pk = torch.rand((batch_size, 2**order, 1), generator=generator, dtype=dtype, device=device)
+    P = torch.cat([1 - pk, pk], dim=2)
 
     return P
 
@@ -44,19 +42,27 @@ def optimal_est(P, order, sequence_length, generator, extra_args):
 
     return opt_loss
 
+# Optimized Markov data generation (thank you @cekbote!)
 def get_batch(P, order, seq_length, batch_size, generator, extra_args):
     data = torch.zeros(batch_size, seq_length+1, device=extra_args.device)
+    powers = torch.Tensor([2**i for i in reversed(range(order))]).to(extra_args.device)
     if P == None:
         # Generate first k bits
         alpha = 0.5
-        for k in range(order):
-            data[:,k] = torch.bernoulli(alpha*torch.ones((batch_size,), device=extra_args.device), generator=generator)
+        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order)), generator=generator)
         # Generate following bits
-        for b in range(batch_size):
-            # New random P for every sequence
-            P = get_random_P(order, generator, extra_args.device, extra_args.dtype)
-            for i in range(order, seq_length):
-                data[b,i] = get_next_symbols(P, order, data[b,i-order:i])
+        P = get_random_P(order, batch_size, generator, extra_args.device, extra_args.dtype)
+        batch_indices = torch.arange(batch_size)
+        
+        for i in range(order, seq_length+1):
+            # Extract the previous 'order' symbols for the entire batch
+            prev_symbols = data[:, i-order:i]
+            # Compute indices using the dot product with powers of 2
+            idx = (prev_symbols @ powers).int()
+            # Fetch next symbols from the transition matrix P for each batch in parallel
+            next_symbols = torch.multinomial(P[batch_indices, idx], 1, generator=generator).squeeze(1)
+            # Update the data with the newly sampled symbols
+            data[:, i] = next_symbols
     else:
         # Use same fixed P for all sequences
         # Generate first k bits
@@ -69,10 +75,13 @@ def get_batch(P, order, seq_length, batch_size, generator, extra_args):
             alpha = 0.5
         else:
             alpha = 0.5
-        for k in range(order):
-            data[:,k] = torch.bernoulli(alpha*torch.ones((batch_size,), device=extra_args.device), generator=generator)
-        for i in range(order, seq_length):
-            data[:,i] = get_next_symbols(P, order, data[:,i-order:i])
+        data[:, :order] = torch.bernoulli(alpha * torch.ones((batch_size, order)), generator=generator)
+        # Generate following bits
+        for i in range(order, seq_length+1):
+            prev_symbols = data[:, i-order:i]
+            idx = (prev_symbols @ powers).int()
+            next_symbols = torch.multinomial(P[idx], 1, generator=generator).squeeze(1)
+            data[:, i] = next_symbols
     x = data[:,:seq_length].to(int)
     y = data[:,1:].to(int)
     
