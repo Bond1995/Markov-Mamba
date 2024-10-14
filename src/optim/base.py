@@ -8,7 +8,7 @@ import time
 from .utils import eval, eval_probs, get_batch, get_random_P, optimal_est, save_checkpoint
 
 
-def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_size, sequence_length, generator, eval_freq, ckpt_path, extra_args):
+def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, batch_size, sequence_length, generator, eval_freq, ckpt_path, extra_args):
     device_type = 'cuda' if 'cuda' in str(extra_args.device) else 'cpu'
     type_ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(
         device_type=device_type, dtype=torch.float16)
@@ -22,12 +22,15 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
         print("Markov transition matrix:")
         print(P)
     else:
-        P_test = get_random_P(order, 1, generator, extra_args.device, extra_args.dtype).squeeze(0)
+        if type == "jump-markov":
+            P_test = get_random_P(order, 2, generator, extra_args.device, extra_args.dtype)
+        else:
+            P_test = get_random_P(order, 1, generator, extra_args.device, extra_args.dtype).squeeze(0)
         print("Test Markov transition matrix:")
         print(P_test)
     
     # Optimal test loss
-    opt_loss = optimal_est(P_test, order, sequence_length, generator, extra_args)
+    opt_loss = optimal_est(P_test, type, order, sequence_length, generator, extra_args)
     if extra_args.wandb:
         wandb.log({
             "val/opt_loss": opt_loss,
@@ -37,7 +40,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
     t0 = time.time()
     while itr < iterations:
         for microstep_idx in range(acc_steps):  # gradient accumulation
-            x, y = get_batch(P, order, sequence_length, batch_size, generator, extra_args)
+            x, y = get_batch(P, type, order, sequence_length, batch_size, generator, extra_args)
             with type_ctx:
                 outputs = model(x, targets=y)
             loss = outputs['loss'] / acc_steps
@@ -59,7 +62,7 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
             model.eval()
             train_loss = loss.detach().cpu().item()
             current_lr = scheduler.get_last_lr()[0] if scheduler is not None else extra_args.lr
-            val_acc, val_loss, val_perplexity = eval(model, P_test, order, 2*sequence_length, batch_size,
+            val_acc, val_loss, val_perplexity = eval(model, P_test, type, order, sequence_length, batch_size,
                                                     generator, extra_args, max_num_batches=10, ctx=type_ctx)
 
             print_string = f"{itr} [train] loss={train_loss:.3f} [val] loss={val_loss:.3f}, pp={val_perplexity:.2f}, acc={val_acc:3f}"
@@ -79,15 +82,17 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, batch_siz
                 })
             
             if itr == iterations:
-                prob_vec, est_vec = eval_probs(model, P_test, order, 2*sequence_length, generator, extra_args,
+                windows = [0, 50, 100, 200] # Windows for add-beta estimator
+                prob_vec, est_vec = eval_probs(model, P_test, type, order, sequence_length, windows, generator, extra_args,
                                                         ctx=type_ctx)
                 if extra_args.wandb:
                     for k in range(2**order):
                         for i in range(len(prob_vec[k])):
-                            wandb.log({
-                                "est/model_est_" + str(k): prob_vec[k][i].detach().cpu().item(),
-                                "est/empirical_est_" + str(k): est_vec[k][i].detach().cpu().item(),
-                            })
+                            # Create dict with estimation values to save
+                            est_dict = {"est/model_est_" + str(k): prob_vec[k][i].detach().cpu().item()}
+                            for j, w in enumerate(windows):
+                                est_dict["est/empirical_est_w" + str(w) + "_" + str(k)] = est_vec[j][k][i].detach().cpu().item()
+                            wandb.log(est_dict)
 
             model.train()
             t0 = time.time()

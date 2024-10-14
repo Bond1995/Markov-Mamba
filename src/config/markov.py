@@ -47,8 +47,9 @@ def parse_args(base_parser, args, namespace):
     # Markov args
     parser.add_argument('--p', default=0.5, type=float)
     parser.add_argument('--q', default=0.5, type=float)
-    parser.add_argument('--order', default=1, type=int)
     parser.add_argument('--chain', default='random', choices=['switch', 'random', 'random-fixed'])
+    parser.add_argument('--type', default='markov', choices=['markov', 'jump-markov'])
+    parser.add_argument('--order', default=1, type=int)
     parser.add_argument('--initial', default='uniform', choices=['uniform', 'steady'])
     
     return parser.parse_args(args, namespace)

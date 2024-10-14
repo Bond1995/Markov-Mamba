@@ -33,6 +33,7 @@ def get_exp_name(args):
 
 
 def main(args):
+    type = args.type
     order = args.order
     generator = torch.Generator(device=args.device)
     generator.seed()
@@ -122,7 +123,7 @@ def main(args):
     print(f"\nTraining model={args.model} \n{vars(args)}\n")
     print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-    train(model, opt, P, order, scheduler, args.iterations, args.acc_steps, args.batch_size, args.sequence_length, generator,
+    train(model, opt, P, type, order, scheduler, args.iterations, args.acc_steps, args.batch_size, args.sequence_length, generator,
         eval_freq=args.eval_freq, 
         ckpt_path=f"{ckpt_path}/ckpt.pt", extra_args=args)
     
