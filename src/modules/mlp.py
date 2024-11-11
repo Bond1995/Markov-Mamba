@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 import wandb
 
-from models.mamba_llm import compute_energies
+from modules.mamba2 import compute_energies
 
 
 class GatedMLP(nn.Module):

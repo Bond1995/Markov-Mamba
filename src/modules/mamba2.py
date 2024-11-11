@@ -9,7 +9,14 @@ import wandb
 from einops import rearrange
 
 from modules.ssd_minimal import ssd_minimal_discrete
-from models.mamba_llm import compute_energies
+
+
+def compute_energies(W):
+    sv = torch.linalg.svdvals(W)
+    energies = torch.cumsum(sv, dim=0)
+    energies = energies / energies[-1]
+
+    return energies
 
 class Mamba2(nn.Module):
     def __init__(

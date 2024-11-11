@@ -10,12 +10,6 @@ from modules.mamba2 import Mamba2
 from modules.mlp import GatedMLP, MLP
 
 
-def compute_energies(W):
-    sv = torch.linalg.svdvals(W)
-    energies = torch.cumsum(sv)
-    energies = energies / energies[-1]
-
-    return energies
 
 class Block(nn.Module):
     def __init__(

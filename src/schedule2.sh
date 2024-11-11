@@ -15,9 +15,9 @@ do
     do
         for n_layer in 1;
         do
-            for d_model in 4 8;
+            for d_model in 8 16;
             do
-                for d_state in 2 4;
+                for d_state in 4 8;
                 do
                     for expand in 1;
                     do
@@ -25,11 +25,11 @@ do
                         do
                             for sequence_length in 512;
                             do
-                                for iterations in 10000;
+                                for iterations in 200;
                                 do
                                     for lr in 0.01;
                                     do
-                                        for j in 1 2 3 4 5;
+                                        for j in 1 2 3 4 5; 
                                         do
                                             d_conv=$((order+1));
                                             # Generate a unique ID for wandb. This makes sure that automatic restarts continue with the same job.
