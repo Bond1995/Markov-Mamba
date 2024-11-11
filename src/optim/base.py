@@ -36,6 +36,13 @@ def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, bat
             "val/opt_loss": opt_loss,
         })
 
+    # Freeze convolution kernels if requested
+    if extra_args.fix_conv:
+        for mn, m in model.named_modules():
+            for pn, p in m.named_parameters():
+                if pn.endswith('conv1d.weight') or pn.endswith('conv1d.bias'):
+                    p.requires_grad = False
+
     model.train()
     t0 = time.time()
     while itr < iterations:

@@ -7,7 +7,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--acc_steps', default=1, type=int)
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--device', default='cuda:0', type=str)
-    parser.add_argument('--iterations', default=400, type=int)
+    parser.add_argument('--iterations', default=1000, type=int)
     parser.add_argument('--lr', default=2e-3, type=float)
     parser.add_argument('--warmup_percent', default=0.02, type=float)
     parser.add_argument('--weight_decay', default=1e-3, type=float)
@@ -15,7 +15,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--beta2', default=0.95, type=float)
     parser.add_argument('--scheduler', default='cos', choices=['linear', 'cos', 'none'])
     parser.add_argument('--opt', default='adamw', choices=['adamw', 'sgd'])
-    parser.add_argument('--eval_freq', default=1, type=int)
+    parser.add_argument('--eval_freq', default=200, type=int)
     parser.add_argument('--results_base_folder', default="./exps", type=str)
     parser.add_argument('--grad_clip', default=1.0, type=float) 
     # Dataset params
@@ -37,7 +37,9 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--activation', default='relu', choices=['relu', 'silu'])
     parser.add_argument('--layernorm', action='store_true') # If True, adds layer norms
     parser.add_argument('--conv', action='store_true') # If True, adds convolution
+    parser.add_argument('--conv_type', default='base', choices=['base', 'fixed', 'onlyx', 'onlyb', 'onlyc'])
     parser.add_argument('--conv_act', action='store_true') # If True, adds convolution activation in Mamba block
+    parser.add_argument('--fix_conv', action='store_true') # If True, freezes the convolution layer
     parser.add_argument('--gate', action='store_true') # If True, adds gating in Mamba block and replaces MLP with GatedMLP
     # logging params (wandb)
     parser.add_argument('--wandb', action='store_true')

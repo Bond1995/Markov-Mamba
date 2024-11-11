@@ -14,7 +14,6 @@ def get_random_P(order, batch_size, generator, device, dtype):
 def empirical_est(x, y, type, order, window=0, beta=1):
     assert x.size(0) == 1
     seq_length = x.size(1)
-    print(seq_length)
     device = x.device
     x = x.float().squeeze()
     y = y.float().squeeze()

@@ -4,6 +4,8 @@ from torch import nn
 from torch.nn import functional as F
 import wandb
 
+from models.mamba_llm import compute_energies
+
 
 class GatedMLP(nn.Module):
     def __init__(
@@ -41,10 +43,12 @@ class GatedMLP(nn.Module):
         if save_weights and self.config.wandb:
             print("fc1-l"+str(self.id))
             print(self.fc1.weight)
+            print(compute_energies(self.fc1.weight.numpy(force=True)))
             wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
 
             print("fc2-l"+str(self.id))
             print(self.fc2.weight)
+            print(compute_energies(self.fc2.weight.numpy(force=True)))
             wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
         
         return y
@@ -58,7 +62,7 @@ class MLP(nn.Module):
         hidden_features=None,
         out_features=None,
         bias=False,
-        factor=4,
+        factor=2,
         device=None,
         dtype=None,
     ):
@@ -84,10 +88,12 @@ class MLP(nn.Module):
         if save_weights and self.config.wandb:
             print("fc1-l"+str(self.id))
             print(self.fc1.weight)
+            print(compute_energies(self.fc1.weight.numpy(force=True)))
             wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
 
             print("fc2-l"+str(self.id))
             print(self.fc2.weight)
+            print(compute_energies(self.fc2.weight.numpy(force=True)))
             wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
         
         return y

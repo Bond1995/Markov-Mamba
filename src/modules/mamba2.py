@@ -9,7 +9,7 @@ import wandb
 from einops import rearrange
 
 from modules.ssd_minimal import ssd_minimal_discrete
-
+from models.mamba_llm import compute_energies
 
 class Mamba2(nn.Module):
     def __init__(
@@ -51,16 +51,39 @@ class Mamba2(nn.Module):
         self.in_proj = nn.Linear(self.d_model, d_in_proj, bias=bias, **factory_kwargs)
 
         if self.config.conv:
-            conv_dim = self.d_inner + 2 * self.ngroups * self.d_state
-            self.conv1d = nn.Conv1d(
-                in_channels=conv_dim,
-                out_channels=conv_dim,
-                bias=conv_bias,
-                kernel_size=self.d_conv,
-                groups=conv_dim,
-                padding=self.d_conv - 1,
-                **factory_kwargs,
-            )
+            if self.config.conv_type == "onlyx":
+                conv_dim = self.d_inner
+                self.conv1d = nn.Conv1d(
+                    in_channels=conv_dim,
+                    out_channels=conv_dim,
+                    bias=conv_bias,
+                    kernel_size=self.d_conv,
+                    groups=conv_dim,
+                    padding=self.d_conv - 1,
+                    **factory_kwargs,
+                )
+            elif self.config.conv_type == "onlyb" or self.config.conv_type == "onlyc":
+                conv_dim = self.ngroups * self.d_state
+                self.conv1d = nn.Conv1d(
+                    in_channels=conv_dim,
+                    out_channels=conv_dim,
+                    bias=conv_bias,
+                    kernel_size=self.d_conv,
+                    groups=conv_dim,
+                    padding=self.d_conv - 1,
+                    **factory_kwargs,
+                )
+            else:
+                conv_dim = self.d_inner + 2 * self.ngroups * self.d_state
+                self.conv1d = nn.Conv1d(
+                    in_channels=conv_dim,
+                    out_channels=conv_dim,
+                    bias=conv_bias,
+                    kernel_size=self.d_conv,
+                    groups=conv_dim,
+                    padding=self.d_conv - 1,
+                    **factory_kwargs,
+                )
 
         if self.config.conv_act:
             if self.activation == "relu":
@@ -104,6 +127,12 @@ class Mamba2(nn.Module):
         """
         batch, seqlen, dim = u.shape
 
+        if save_weights:
+            print("Input to Mamba:")
+            print(u[0,:30])
+            if self.config.wandb:
+                wandb.log({"u-l"+str(self.id): wandb.Image(u[0,:30].numpy(force=True).squeeze())})
+        
         zxbcdt = self.in_proj(u)  # (B, L, d_in_proj)
         A = -torch.exp(self.A_log).to(self.dtype)  # (nheads) or (d_inner, d_state)
 
@@ -115,20 +144,46 @@ class Mamba2(nn.Module):
 
         # 1D Convolution
         if self.config.conv:
-            if self.config.conv_act:
-                xBC = self.act(
-                    self.conv1d(xBC.transpose(1, 2)).transpose(1, 2)
-                )
+            if self.config.conv_type == "onlyx":
+                x, B, C = torch.split(xBC, [self.d_inner, self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
+                x = self.conv1d(x.transpose(1, 2)).transpose(1, 2)
+                if self.config.conv_act:
+                    x = self.act(x)
+                x = x[:, :seqlen, :].to(self.dtype)
+                B = B[:, :seqlen, :].to(self.dtype)
+                C = C[:, :seqlen, :].to(self.dtype)
+            elif self.config.conv_type == "onlyb":
+                x, B, C = torch.split(xBC, [self.d_inner, self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
+                B = self.conv1d(B.transpose(1, 2)).transpose(1, 2)
+                if self.config.conv_act:
+                    B = self.act(B)
+                x = x[:, :seqlen, :].to(self.dtype)
+                B = B[:, :seqlen, :].to(self.dtype)
+                C = C[:, :seqlen, :].to(self.dtype)
+            elif self.config.conv_type == "onlyc":
+                x, B, C = torch.split(xBC, [self.d_inner, self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
+                C = self.conv1d(C.transpose(1, 2)).transpose(1, 2)
+                if self.config.conv_act:
+                    C = self.act(C)
+                x = x[:, :seqlen, :].to(self.dtype)
+                B = B[:, :seqlen, :].to(self.dtype)
+                C = C[:, :seqlen, :].to(self.dtype)
             else:
                 xBC = self.conv1d(xBC.transpose(1, 2)).transpose(1, 2)
-        else:
-            if self.config.conv_act:
-                xBC = self.act(xBC)
-        xBC = xBC[:, :seqlen, :].to(self.dtype) # (B, L, self.d_inner + 2 * ngroups * d_state)
+                if self.config.conv_act:
+                    xBC = self.act(xBC)
+                xBC = xBC[:, :seqlen, :].to(self.dtype) # (B, L, self.d_inner + 2 * ngroups * d_state)
+                x, B, C = torch.split(xBC, [self.d_inner, self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
 
-        # Split into 3 main branches: X, B, C
-        # These correspond to V, K, Q respectively in the SSM/attention duality
-        x, B, C = torch.split(xBC, [self.d_inner, self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
+        if save_weights:
+            print("X, B, C after convolution:")
+            print(x[0,:30])
+            print(B[0,:30])
+            print(C[0,:30])
+            if self.config.wandb:
+                wandb.log({"cx-l"+str(self.id): wandb.Image(x[0,:30].numpy(force=True).squeeze())})
+                wandb.log({"cB-l"+str(self.id): wandb.Image(B[0,:30].numpy(force=True).squeeze())})
+                wandb.log({"cC-l"+str(self.id): wandb.Image(C[0,:30].numpy(force=True).squeeze())})
 
         x = rearrange(x, "b l (h p) -> b l h p", p=self.headdim)
         B = rearrange(B, "b l (g n) -> b l g n", g=self.ngroups)
@@ -153,16 +208,20 @@ class Mamba2(nn.Module):
             if save_weights:
                 print("in_proj-l"+str(self.id))
                 print(self.in_proj.weight)
+                print(compute_energies(self.in_proj.weight.numpy(force=True)))
                 wandb.log({"in_proj-l"+str(self.id): wandb.Image(self.in_proj.weight.numpy(force=True))})
 
                 print("out_proj-l"+str(self.id))
                 print(self.out_proj.weight)
+                print(compute_energies(self.out_proj.weight.numpy(force=True)))
                 wandb.log({"out_proj-l"+str(self.id): wandb.Image(self.out_proj.weight.numpy(force=True))})
 
                 if self.config.conv:
                     print("conv-l"+str(self.id))
                     print(self.conv1d.weight)
                     wandb.log({"conv-l"+str(self.id): wandb.Image(self.conv1d.weight.numpy(force=True).squeeze())})
+                    print("conv-bias-l"+str(self.id))
+                    print(self.conv1d.bias)
             if self.training and self.nheads == 1:
                 wandb.log({
                     "params/A-l"+str(self.id): torch.exp(self.A_log).item(),

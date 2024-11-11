@@ -10,6 +10,13 @@ from modules.mamba2 import Mamba2
 from modules.mlp import GatedMLP, MLP
 
 
+def compute_energies(W):
+    sv = torch.linalg.svdvals(W)
+    energies = torch.cumsum(sv)
+    energies = energies / energies[-1]
+
+    return energies
+
 class Block(nn.Module):
     def __init__(
         self, config, id
@@ -48,7 +55,6 @@ class Block(nn.Module):
 
 
 class MambaLMHeadModel(nn.Module):
-
     def __init__(
         self,
         config
@@ -72,6 +78,18 @@ class MambaLMHeadModel(nn.Module):
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
         self.tie_weights()
+
+        if self.config.fix_conv: # Initialize conv to given kernel
+            for mn, m in self.named_modules():
+                for pn, p in m.named_parameters():
+                    if pn.endswith('conv1d.weight'):
+                        with torch.no_grad():
+                            ker = torch.Tensor([2**i for i in range(p.size(2))])
+                            ker = ker.repeat(p.size(0),1,1)
+                            p.copy_(ker)
+                    elif pn.endswith('conv1d.bias'):
+                        with torch.no_grad():
+                            p.zero_()
     
     def _init_weights(
         self,
@@ -112,6 +130,8 @@ class MambaLMHeadModel(nn.Module):
                 if hasattr(p, '_no_weight_decay'):
                     if p._no_weight_decay == True:
                         no_decay.add(fpn)
+                elif "ker" in pn:
+                    no_decay.add(fpn)
                 elif pn.endswith('bias'):
                     no_decay.add(fpn)
                 elif pn.endswith('weight') and isinstance(m, whitelist_weight_modules):
@@ -135,6 +155,9 @@ class MambaLMHeadModel(nn.Module):
         ]
     
     def forward(self, idx, targets, save_weights=False):
+        if save_weights:
+            print("Input sequence:")
+            print(idx[0,:30])
         hidden_states = self.embedding(idx)
         for layer in self.layers:
             hidden_states = layer(hidden_states, save_weights=save_weights)
