@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import wandb
 import time
 
-from .utils import eval, eval_probs, get_batch, get_random_P, optimal_est, save_checkpoint
+from .utils import eval, eval_probs, eval_conditions, get_batch, get_random_P, optimal_est, save_checkpoint
 
 
 def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, batch_size, sequence_length, generator, eval_freq, ckpt_path, extra_args):
@@ -40,7 +40,7 @@ def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, bat
     if extra_args.fix_conv:
         for mn, m in model.named_modules():
             for pn, p in m.named_parameters():
-                if pn.endswith('conv1d.weight') or pn.endswith('conv1d.bias'):
+                if pn.endswith('conv1d.weight') or pn.endswith('conv1d.bias') or "ker" in pn:
                     p.requires_grad = False
 
     model.train()
@@ -83,6 +83,7 @@ def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, bat
                     "iter": itr,
                     "train/loss": train_loss,
                     "val/loss": val_loss,
+                    "val/loss_gap": val_loss - opt_loss,
                     "val/perplexity": val_perplexity,
                     "val/acc": val_acc,
                     "lr": current_lr,
@@ -100,6 +101,9 @@ def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, bat
                             for j, w in enumerate(windows):
                                 est_dict["est/empirical_est_w" + str(w) + "_" + str(k)] = est_vec[j][k][i].detach().cpu().item()
                             wandb.log(est_dict)
+
+                # Check conditions
+                eval_conditions(model, extra_args, ctx=type_ctx)
 
             model.train()
             t0 = time.time()

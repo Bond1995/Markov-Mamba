@@ -228,6 +228,18 @@ def eval_probs(model, P, type, order, sequence_length, windows, generator, extra
 
     return prob_vec, est_vec
 
+@torch.no_grad()
+def eval_conditions(model, extra_args, ctx=nullcontext()):
+    assert model.training == False
+
+    x0 = torch.Tensor([[0,0,1,1,0]])
+    x1 = torch.zeros(1,251)
+    x = torch.cat((x0, x1), dim=1).to(int).to(extra_args.device)
+    with ctx:
+        outputs = model(x, targets=x, check_conditions=True)
+
+    return None
+
 
 def save_checkpoint(model, opt, scheduler, itr, ckpt_path, **extra_args):
 

@@ -62,7 +62,7 @@ class MLP(nn.Module):
         hidden_features=None,
         out_features=None,
         bias=False,
-        factor=2,
+        factor=4,
         device=None,
         dtype=None,
     ):
@@ -85,15 +85,23 @@ class MLP(nn.Module):
         y = self.activation(y)
         y = self.fc2(y)
 
-        if save_weights and self.config.wandb:
-            print("fc1-l"+str(self.id))
-            print(self.fc1.weight)
-            print(compute_energies(self.fc1.weight.numpy(force=True)))
-            wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
+        if not self.training and self.config.wandb:
+            energies1 = compute_energies(self.fc1.weight.numpy(force=True))
+            energies2 = compute_energies(self.fc2.weight.numpy(force=True))
+            wandb.log({
+                "val/energy-fc1-l"+str(self.id): energies1[0].item(),
+                "val/energy-fc2-l"+str(self.id): energies2[0].item(),
+            })
 
-            print("fc2-l"+str(self.id))
-            print(self.fc2.weight)
-            print(compute_energies(self.fc2.weight.numpy(force=True)))
-            wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
+            if save_weights:
+                print("fc1-l"+str(self.id))
+                print(self.fc1.weight)
+                print(energies1)
+                wandb.log({"fc1-l"+str(self.id): wandb.Image(self.fc1.weight.numpy(force=True))})
+
+                print("fc2-l"+str(self.id))
+                print(self.fc2.weight)
+                print(energies2)
+                wandb.log({"fc2-l"+str(self.id): wandb.Image(self.fc2.weight.numpy(force=True))})
         
         return y
