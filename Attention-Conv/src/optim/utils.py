@@ -31,7 +31,7 @@ def empirical_est(x, y, order, beta=1):
     return est_vec
 
 def optimal_est(P, order, sequence_length, generator, dist, extra_args):
-    x, y = get_batch(P, order, sequence_length, 1, 4096, generator, dist, extra_args)
+    x, y = get_batch(P, order, sequence_length, 1, 2048, generator, dist, extra_args)
     powers = torch.Tensor([2**i for i in reversed(range(order))]).to(P.device)
     opt_logits = torch.zeros(x.size(0), x.size(1), P.size(1), device=P.device)
     if order > 1:
@@ -141,11 +141,15 @@ def eval_att(model, P, order, sequence_length, batch_size, generator, extra_args
 
 
 @torch.no_grad()
-def eval_probs(model, P, order, sequence_length, generator, extra_args, ctx=nullcontext()):
+def eval_probs(model, P, order, sequence_length, generator, extra_args, input_seq=None, output_seq=None, ctx=nullcontext()):
     assert model.training == False
     assert P is not None
     
-    x, y = get_batch(P, order, sequence_length, 1, 1, generator, None, extra_args)
+    if input_seq is not None and output_seq is not None:
+        x = input_seq[:, :sequence_length]
+        y = output_seq[:, :sequence_length]
+    else:
+        x, y = get_batch(P, order, sequence_length, 1, 1, generator, None, extra_args)
 
     # Get empirical add-beta estimator
     est_vec = empirical_est(x, y, order)

@@ -6,7 +6,7 @@ import distributed
 def parse_args(base_parser, args, namespace):
     parser = base_parser
     # General training params
-    parser.add_argument('--n_minibatch', default=64, type=int)
+    parser.add_argument('--n_minibatch', default=256, type=int)
     parser.add_argument('--minibatch_size', default=1, type=int)
     parser.add_argument('--acc_steps', default=1, type=int)
     parser.add_argument('--seed', default=0, type=int)
@@ -19,7 +19,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--beta2', default=0.95, type=float)
     parser.add_argument('--scheduler', default='cos', choices=['linear', 'cos', 'none'])
     parser.add_argument('--opt', default='adamw', choices=['adamw', 'sgd'])
-    parser.add_argument('--eval_freq', default=1, type=int) # in iterations
+    parser.add_argument('--eval_freq', default=100, type=int) # in iterations
     parser.add_argument('--results_base_folder', default="./exps", type=str) 
     parser.add_argument('--grad_clip', default=1.0, type=float) # default value is 1.0 in NanoGPT
     # Dataset params

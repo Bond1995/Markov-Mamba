@@ -90,8 +90,13 @@ def train_base(model, opt, P, order, scheduler, iterations, acc_steps, n_minibat
                 })
             
             if itr == iterations:
+                #x = torch.load('x_test.pt')
+                #y = torch.load('y_test.pt')
+                x = None
+                y = None
+
                 prob_vec, est_vec = eval_probs(model, P_test, order, sequence_length, generator, extra_args,
-                                                        ctx=type_ctx)
+                                                        input_seq=x, output_seq=y, ctx=type_ctx)
                 if extra_args.wandb:
                     for k in range(2**order):
                         for i in range(len(prob_vec[k])):

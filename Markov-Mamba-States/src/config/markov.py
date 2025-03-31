@@ -30,17 +30,15 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--nheads', default=1, type=int)
     parser.add_argument('--ngroups', default=1, type=int)
     parser.add_argument('--n_layer', default=1, type=int)
-    parser.add_argument('--sequence_length', default=256, type=int)
+    parser.add_argument('--sequence_length', default=512, type=int)
     parser.add_argument('--dtype', default=torch.float32, type=torch.dtype)
     parser.add_argument('--bias', default=False, type=bool)
     parser.add_argument('--activation', default='relu', choices=['relu', 'silu'])
     parser.add_argument('--layernorm', action='store_true') # If True, adds layer norms
     parser.add_argument('--conv', action='store_true') # If True, adds convolution
-    parser.add_argument('--conv_type', default='base', choices=['base', 'fixed', 'onlyx', 'onlyxb'])
+    parser.add_argument('--conv_type', default='base', choices=['base'])
     parser.add_argument('--conv_act', action='store_true') # If True, adds convolution activation in Mamba block
-    parser.add_argument('--fix_conv', action='store_true') # If True, freezes the convolution layer
     parser.add_argument('--gate', action='store_true') # If True, adds gating in Mamba block and replaces MLP with GatedMLP
-    parser.add_argument('--fix_A', action='store_true') # If True, fixes A = 1
     parser.add_argument('--no_mlp', action='store_true') # If True, removes the MLP layer
     parser.add_argument('--mlp_factor', default=4, type=int) # MLP multiplicative factor
     # logging params (wandb)
@@ -49,11 +47,7 @@ def parse_args(base_parser, args, namespace):
     parser.add_argument('--wandb_run_prefix', default="none", type=str)
     parser.add_argument('--eval_seq_prefix', default="0", type=str)
     # Markov args
-    parser.add_argument('--p', default=0.5, type=float)
-    parser.add_argument('--q', default=0.5, type=float)
     parser.add_argument('--chain', default='random', choices=['switch', 'random', 'random-fixed'])
-    parser.add_argument('--type', default='markov', choices=['markov', 'jump-markov'])
     parser.add_argument('--order', default=1, type=int)
-    parser.add_argument('--initial', default='uniform', choices=['uniform', 'steady'])
     
     return parser.parse_args(args, namespace)

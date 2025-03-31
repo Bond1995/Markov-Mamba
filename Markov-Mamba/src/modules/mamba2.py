@@ -155,7 +155,7 @@ class Mamba2(nn.Module):
         dt = F.softplus(dt + self.dt_bias).to(self.dtype)  # (B, L, nheads)
         assert self.activation in ["silu", "relu"]
 
-        if check_conditions:
+        if check_conditions and self.config.conv and self.config.vocab_size == 2:
             if self.config.conv_type == "onlyxb":
                 xB, _ = torch.split(xBC, [self.d_inner + self.ngroups * self.d_state, self.ngroups * self.d_state], dim=-1)
                 xB0 = xB[0, 0].unsqueeze(0)
@@ -243,7 +243,7 @@ class Mamba2(nn.Module):
             if self.config.wandb:
                 wandb.save('At.npy')
         
-        if check_conditions:
+        if check_conditions and self.config.conv and self.config.vocab_size == 2:
             if self.config.conv_type == "onlyxb":
                 # Compute vectors
                 xdt = x*dt.unsqueeze(-1)

@@ -98,11 +98,11 @@ def train_base(model, opt, P, type, order, scheduler, iterations, acc_steps, bat
                 torch.save(y, 'y_test.pt')
                 if extra_args.wandb:
                     wandb.save('x_test.pt')
-                    wandb.save('y_test.pt')
+                    wandb.save('y_test.pt')'''
                 x = torch.load('x_test.pt')
-                y = torch.load('y_test.pt')'''
-                x = None
-                y = None
+                y = torch.load('y_test.pt')
+                #x = None
+                #y = None
 
                 betas = np.linspace(0.1,3,30)
                 prob_vec, est_vec, beta_vec = eval_probs(model, P_test, type, order, sequence_length, windows, generator, extra_args,
