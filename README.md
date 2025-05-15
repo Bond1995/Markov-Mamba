@@ -4,6 +4,7 @@ Code to experiment on Mamba (Selective State-Space Models) with Markov data.
 ### A few pointers
 
 -   [Markov-Mamba](Markov-Mamba) contains the full Mamba model for binary k-order Markov chains.
+-   [Markov-Mamba-States](Markov-Mamba-States) contains the full Mamba model finite-state k-order Markov chains.
 -   [Markov-Mamba-L1](Markov-Mamba-L1) contains the Mamba model with L1 normalization in place of softmax.
 -   [Markov-Mamba-Switch](Markov-Mamba-Switch) contains the full Mamba model for switching Markov chains.
 -   [Attention-Conv](Attention-Conv) contains a transformer model with convolution for the Q, K and V matrices.

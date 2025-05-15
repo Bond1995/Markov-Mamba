@@ -3,7 +3,7 @@ set -e  # exit on error
 
 USER=bondasch
 LAB=linx
-WANDB_PROJECT="markov-mamba-emb-new"
+WANDB_PROJECT="markov-mamba-deeper"
 WANDB_RUN_GROUP="test01"
 WANDB_API_KEY=`python -c "import wandb; print(wandb.api.api_key)"`
 CODE_BUNDLE=`epfml bundle pack .`
@@ -11,13 +11,13 @@ CODE_BUNDLE=`epfml bundle pack .`
 i=1;
 for chain in random;
 do
-    for order in 1 2 3 4 5;
+    for order in 3;
     do
-        for n_layer in 1;
+        for n_layer in 2;
         do
-            for d_model in 2 4 8 16 32;
+            for d_model in 4 6;
             do
-                for d_conv in 5;
+                for d_conv in 4;
                 do
                     for expand in 1;
                     do
@@ -25,11 +25,11 @@ do
                         do
                             for sequence_length in 512;
                             do
-                                for iterations in 8000;
+                                for iterations in 6000;
                                 do
                                     for lr in 0.002;
                                     do
-                                        for j in 1 2 3;
+                                        for j in 1 2 3 4 5;
                                         do
                                             if [ `expr $i % 10` -eq 0 ]
                                             then

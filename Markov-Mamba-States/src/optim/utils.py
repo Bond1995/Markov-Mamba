@@ -27,7 +27,7 @@ def optimal_est(dist, P, vocab_size, order, sequence_length, generator, extra_ar
 
     return opt_loss
 
-# Optimized Markov data generation (thank you @cekbote!)
+# Optimized Markov data generation
 def get_batch(dist, P, vocab_size, order, seq_length, batch_size, generator, extra_args):
     data = torch.zeros(batch_size, seq_length+1, device=extra_args.device)
     alpha = 1.0 / vocab_size

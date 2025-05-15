@@ -44,7 +44,7 @@ def optimal_est(P, order, sequence_length, generator, dist, extra_args):
 
     return opt_loss.item()
 
-# Optimized Markov data generation (thank you @cekbote!)
+# Optimized Markov data generation
 def get_batch(P, order, seq_length, n_minibatch, minibatch_size, generator, dist, extra_args):
     batch_size = n_minibatch * minibatch_size
     data = torch.zeros(batch_size, seq_length+1, device=extra_args.device)
